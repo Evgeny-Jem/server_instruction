@@ -12,7 +12,7 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
 
 ## 2.	Устанавливаем Git, Docker, и Nginx, и другие:
     sudo apt install git docker.io nginx docker-compose
-    sudo apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl curl
+    sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl curl
     sudo systemctl enable docker
     sudo systemctl enable nginx
 
@@ -215,9 +215,8 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
 ### b.	Запуск SSH-агента и добавление вашего ключа:
     eval "$(ssh-agent -s)"
     ssh-add ~/.ssh/id_rsa
-### c.	Копирование SSH-ключа в буфер обмена:
+### c.	Копирование SSH-ключа в буфер обмена. Команда выведет ваш публичный SSH-ключ. Скопируйте его в буфер обмена:
     cat ~/.ssh/id_rsa.pub
-Команда выведет ваш публичный SSH-ключ. Скопируйте его в буфер обмена.
 ### d.	Добавление нового SSH-ключа на GitHub:
 Перейдите на GitHub и зайдите в "Settings" (находится в правом верхнем углу).
 В меню слева выберите "SSH and GPG keys" -> "New SSH key".
