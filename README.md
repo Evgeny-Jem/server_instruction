@@ -12,7 +12,7 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
 
 ## 2.	Устанавливаем Git, Docker, и Nginx, и другие:
     sudo apt install git docker.io nginx docker-compose
-    sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl curl
+    sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl
     sudo systemctl enable docker
     sudo systemctl enable nginx
 
