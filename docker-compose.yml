@@ -1,0 +1,50 @@
+version: "3"
+services:
+  имя_службы_бота:
+    build: .
+    container_name: имя_службы_бота
+    ports:
+      - "8080:8080"
+    command: [ "python", "app.py" ] # app.py - Название главного файла проекта
+    depends_on:
+      - nats-server  # указываем зависимость от NATS сервера
+      - redis  # добавляем зависимость от Redis
+      - postgres  # добавляем зависимость от PostgreSQL
+    restart: always
+
+  nats-server: # добавляем NATS сервер как новую службу
+    image: nats:latest  # можно указать конкретную версию вместо latest
+    ports:
+      - "4222:4222"  # открываем порт для внешних соединений
+    restart: always
+
+  some_nats_worker:
+    build: .
+    container_name: some_nats_worker
+    command: [ "python", "some_nats_worker.py" ] 
+    depends_on:
+      - nats-server  # указываем зависимость от NATS сервера
+      - redis  # добавляем зависимость от Redis
+      - postgres  # добавляем зависимость от PostgreSQL
+    restart: always
+
+  redis: # добавляем Redis сервер как новую службу
+    image: "redis:latest"  # можно указать конкретную версию вместо latest
+    ports:
+      - "6379:6379"  # открываем порт для внешних соединений
+    restart: always
+
+  postgres: # добавляем PostgreSQL сервер как новую службу
+    image: "postgres:latest"  # можно указать конкретную версию вместо latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${имя_переменной_из_env_файла}
+      POSTGRES_USER: ${имя_переменной_из_env_файла}
+      POSTGRES_PASSWORD: ${имя_переменной_из_env_файла}
+    ports:
+      - "5432:5432"  # открываем порт для внешних соединений
+    restart: always
+
+volumes:
+  postgres_data:  # объявляем volume для постоянного хранения данных PostgreSQL. Если не указать, то при остановке docker-compose и повторного запуска, ваши файлы пропадут
