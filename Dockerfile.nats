@@ -1,0 +1,21 @@
+# Используем базовый образ Debian
+    FROM debian:bullseye-slim
+    
+    # Устанавливаем необходимые пакеты (wget и tar) - для загрузки и распаковки наших образов
+    RUN apt-get update && \
+        apt-get install -y wget tar
+    
+    # Загружаем и устанавливаем nats-server
+    RUN wget https://github.com/nats-io/nats-server/releases/download/v2.9.15/nats-server-v2.9.15-linux-amd64.tar.gz && \
+        tar -zxf nats-server-*.tar.gz && \
+        cp nats-server-*-linux-amd64/nats-server /usr/bin/ && \
+        rm -rf nats-server-*-linux-amd64 nats-server-*.tar.gz
+    
+    # Загружаем и устанавливаем natscli
+    RUN wget https://github.com/nats-io/natscli/releases/download/v0.0.35/nats-0.0.35-amd64.deb && \
+        dpkg -i nats-0.0.35-amd64.deb && \
+        rm nats-0.0.35-amd64.deb
+    
+    # Команда для запуска NATS сервера с JetStream и другими параметрами
+    CMD ["nats-server", "-js", "--store_dir", "/app/data", "--net", "nats_server", "--addr", "0.0.0.0", "--port", "4222", "--http_port", "8222", "--debug", "--trace"]
+    # Как можете видеть, я запускаю сервер с параметром --net nats_server, так как так у меня называется служба в docker-compose.yml
