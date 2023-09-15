@@ -15,53 +15,54 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
     sudo apt install git docker.io nginx docker-compose
     sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl
     sudo systemctl enable docker
-    sudo systemctl enable nginx
 
-## 3.	Устанавливаем Certbot для работы с SSL:
-    sudo apt install certbot python3-certbot-nginx
+## 3.	Настраиваем брандмауэр:  
+Для того, чтобы серевер Telegram API мог достучаться до нашего бота, необходимо, чтобы были открыты входящие соединения.
+    sudo ufw allow 'Nginx Full'
+Данная команда открывает входящий трафик по протоколу http и https.  
 
-## 4.	Настройка SSL для Nginx: 
-### a.	Запускаем Certbot для настройки SSL:
-    sudo certbot -–nginx
-### b.	Следуем инструкциям, чтобы настроить SSL для вашего домена. Там не сложно. Ввести почту, Имя своего домена сервера, Согласится, потом Не согласится и готово (последовательность уже не помню, но примерно так).
-
-## 5.	Запускаем Nginx
+## 4.	Запускаем Nginx:  
+nginx - это веб-сервер, который мы будем использовать для проксирования запросов от Telegram API к вашему вебхуку.
     sudo systemctl enable nginx
     sudo systemctl start nginx 
     systemctl status nginx
 В выводе команды вы должны увидеть что-то вроде Active: active (running)
 
-## 6.	Настройка Nginx:
+## 4.	Настройка Nginx:
 ### a.	Создайте файл конфигурации для вашего сайта в /etc/nginx/sites-available/:
-    sudo nano /etc/nginx/sites-available/YOUR_DOMAIN_NAME
+    sudo nano /etc/nginx/sites-available/example.com
 ### b.	Добавьте следующее содержимое в файл конфигурации:
+    # Директивы для HTTP (80й порт)
     server {
-      listen 80;
-      server_name YOUR_DOMAIN_NAME;
-      return 301 https://$host$request_uri;
+      listen 80; # Слушать порт 443 (стандартный HTTPS порт) с SSL.
+      server_name example.com; # Имя сервера (домен), для которого эта конфигурация применима.
     }
-    
+
+    # Директивы для HTTPS (443й порт)
     server {
-      listen 443 ssl;
-      server_name YOUR_DOMAIN_NAME;
-    
-      ssl_certificate /etc/letsencrypt/live/YOUR_DOMAIN_NAME/fullchain.pem;
-      ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN_NAME/privkey.pem;
-      # Дополнительные параметры SSL (опционально)
-      ...
-    
-      location / {
-        proxy_pass http://localhost:YOUR_BOT_PORT; # Порт, на котором работает ваш Telegram бот
+      listen 443 ssl; # Слушать порт 443 (стандартный HTTPS порт) с SSL.
+      server_name example.com; # Имя сервера (домен), для которого эта конфигурация применима.
+      
+      # Пути к файлам сертификата и ключа.
+      # Данный блок должен заполниться автоматически после настройки SSL из пункта 6
+      ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+      # Директивы для проксирования
+      location / { # "location /"  - Определяет, как обрабатывать запросы к корневому URL (/)
+        proxy_pass http://localhost:YOUR_BOT_PORT; # proxy_pass - Куда перенаправлять входящие запросы. Порт, на котором работает ваш Telegram бот
+        # Параметры ниже необязательны
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       }
     }
 
-Замените YOUR_BOT_PORT на порт, на котором работает ваш Telegram бот (который вы пробросили из Docker-контейнера на хост-машину)
-Замените YOUR_DOMAIN_NAME на имя, которое вы использовали при регистрации сертификата ssl, из п.4.
+Где example.com - это имя вашего домена, которое вам дал ваш хостинг.  
+Замените YOUR_BOT_PORT на порт, на котором работает ваш Telegram бот (который вы пробросили из Docker-контейнера на хост-машину).  
+
 ### c.	Создайте символическую ссылку на этот файл в директории sites-enabled
-    sudo ln -s /etc/nginx/sites-available/YOUR_DOMAIN_NAME /etc/nginx/sites-enabled/
+    sudo ln -s /etc/nginx/sites-available/example.com /etc/nginx/sites-enabled/
 ### d.	Переименовать дефолтные настройки, во избежание конфликта. Либо закомментировать все строки в файле default:
     sudo mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.backup
 ### e.	Проверьте конфигурацию Nginx:
@@ -69,6 +70,16 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
 Если все в порядке, вы должны увидеть сообщение: `syntax is okay, test is successful`
 ### f.	Перезапустите Nginx:
     sudo systemctl restart nginx
+
+## 5.	Устанавливаем Certbot для работы с SSL:
+    sudo apt install certbot python3-certbot-nginx
+
+## 6.	Настройка SSL для Nginx: 
+### a.	Запускаем Certbot для настройки SSL:
+    sudo certbot --nginx -d example.com -d www.example.com
+Если не сработал вариант выше, то пробуем командой, но уже внутри certbot прописываем ваш домен:
+    sudo certbot -–nginx
+### b.	Следуем инструкциям, чтобы настроить SSL для вашего домена. Там не сложно.
 
 ## 7.	Установка вебхука для Telegram-бота:
 ### a.	Обычно это делается внутри кода, в файле запуска бота. Задача дать понять Телеграму, что все обновления нужно слать вам на адрес вебхука. Но если вы не делали это в коде, то можно прямо с консоли отправить:
@@ -169,7 +180,7 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
           - "8080:8080"
         command: [ "python", "app.py" ] # app.py - Название главного файла проекта
         depends_on:
-          - nats-server  # указываем зависимость от NATS сервера
+          - nats_server  # указываем зависимость от NATS сервера
           - redis  # добавляем зависимость от Redis
           - postgres  # добавляем зависимость от PostgreSQL
         restart: always
@@ -203,6 +214,8 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
       # адрес хоста должен быть не 127.0.0.1, а именем службы из вашего docker-compose: REDIS_HOST='redis'
       redis: # добавляем Redis сервер как новую службу
         image: "redis:latest"  # можно указать конкретную версию вместо latest
+        volumes:
+          - redis_data:/usr/local/etc/redis
         ports:
           - "6379:6379"  # открываем порт для внешних соединений
         restart: always
@@ -224,6 +237,7 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
     volumes:
       postgres_data:  # объявляем volume для постоянного хранения данных PostgreSQL. Если не указать, то при остановке docker-compose и повторного запуска, ваши файлы пропадут
       nats_data:
+      redis_data:
 
 ## 12.	Я использую Git (GitHub) в качестве репозитария и считаю хорошей привычкой все делать через него. Также это позволяет удобно и быстро разворачивать проекты в новом месте. Для себя избрал самый быстрый и надежный способ – использовать SSH ключ, поэтому моя инструкция ниже. 
 ### a.	Далее создаем SSH ключ на сервере, если SSH ключ уже присутствует на сервер, то сразу к пункту “c”:
@@ -255,18 +269,19 @@ Cron и Pyenv были мной добавлены отдельно, а не в 
 ### c.	Остановить запущенный контейнер:
     docker-compose down
 ### d.	Собрать и запустить контейнер (с указанными аргументами контейнер пересобирается и работает, если сервер будет перезагружен):
-    docker-compose up -d –build
+    docker-compose up -d --build
 ### e.	Если необходимо зайти внутрь запущенного контейнера и провести там какие-то манипуляции: 
-    docker exec -it container_id_or_name /bin/bash)
+    docker exec -it container_id_or_name /bin/bash
 ### f.	Если вы хотите видеть логи приложения: 
-    docker-compose logs -f имя_контейнера_из_docker-compose.yml
-
+    docker-compose logs -f имя_контейнера_из_docker-compose.yml  
 
 ## 15.	Alembic. Если в вашем проекте база данных, то таблицы должны быть размечены прежде, чем все заработает. Вы можете это сделать вручную, зайдя внутрь соответствующего контейнера (службы postgres из файла docker-compose.yml) или если вы используете миграцию от Alembic, то команды для запуска и разметки таблиц бд, не заходя внутрь контейнера:
 ### a.	Создание новой миграции:
     docker exec -it container_id_or_name alembic revision --autogenerate -m "Initial migration"
 ### b.	Применение новой миграции:
-    docker exec -it container_id_or_name alembic upgrade head
+    docker exec -it container_id_or_name alembic upgrade head  
+И не забудьте, что Alembic должен быть установлен в вашем контейнере. Если вы его добавляли в файл requirements.txt вашего проекта, то он конечно будет уже в контейнере.
+    
 ## 16.	Использование Pyenv (не для Docker, а именно на сервере). Pyenv позволяет установить несколько версий Python и переключаться между ними, если нужно. Если бы вопрос с Cron я смог решить в docker-compose, то не стал бы этим заморачиваться:
 ### a.	Установка pyenv:
     curl https://pyenv.run | bash 
