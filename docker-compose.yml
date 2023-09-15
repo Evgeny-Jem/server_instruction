@@ -7,33 +7,48 @@ services:
       - "8080:8080"
     command: [ "python", "app.py" ] # app.py - Название главного файла проекта
     depends_on:
-      - nats-server  # указываем зависимость от NATS сервера
+      - nats_server  # указываем зависимость от NATS сервера
       - redis  # добавляем зависимость от Redis
       - postgres  # добавляем зависимость от PostgreSQL
     restart: always
 
-  nats-server: # добавляем NATS сервер как новую службу
-    image: nats:latest  # можно указать конкретную версию вместо latest
+  nats_worker:
+    build: .
+    container_name: nats_worker
+    command: [ "python", "nats_worker.py" ]
+    depends_on:
+      - nats_server  # указываем зависимость от NATS сервера
+      - redis  # добавляем зависимость от Redis
+      - postgres  # добавляем зависимость от PostgreSQL
+    restart: always
+    
+  # Имейте в виду, что в конфиг файле бота в .env или settings.toml, смотря что используете,
+  # адрес хоста должен быть не 127.0.0.1, а именем службы из вашего docker-compose: NATS_HOST='nats_server'
+  nats_server: # Добавляем NATS сервер как новую службу.
+    build:
+      context: .
+      dockerfile: Dockerfile.nats  # Указываем путь к Dockerfile.nats в котором все настройки и параметры запуска (см. п.18)
     ports:
       - "4222:4222"  # открываем порт для внешних соединений
+      - "6222:6222"
+      - "8222:8222"  # Для HTTP мониторинга
+    volumes:
+      - "nats_data:/app/data"  # Папка для хранения данных (в моем случае в папку проекта в папке data)
+    # - "nats_logs:/app/logs"  # Папка для логов (не обязательна)
     restart: always
 
-  some_nats_worker:
-    build: .
-    container_name: some_nats_worker
-    command: [ "python", "some_nats_worker.py" ] 
-    depends_on:
-      - nats-server  # указываем зависимость от NATS сервера
-      - redis  # добавляем зависимость от Redis
-      - postgres  # добавляем зависимость от PostgreSQL
-    restart: always
-
+  # Имейте в виду, что в конфиг файле бота в .env или settings.toml, смотря что используете,
+  # адрес хоста должен быть не 127.0.0.1, а именем службы из вашего docker-compose: REDIS_HOST='redis'
   redis: # добавляем Redis сервер как новую службу
     image: "redis:latest"  # можно указать конкретную версию вместо latest
+    volumes:
+      - redis_data:/usr/local/etc/redis
     ports:
       - "6379:6379"  # открываем порт для внешних соединений
     restart: always
 
+  # Имейте в виду, что в конфиг файле бота в .env или settings.toml, смотря что используете,
+  # адрес хоста должен быть не 127.0.0.1, а именем службы из вашего docker-compose: POSTGRES_HOST='postgres'
   postgres: # добавляем PostgreSQL сервер как новую службу
     image: "postgres:latest"  # можно указать конкретную версию вместо latest
     volumes:
@@ -48,3 +63,5 @@ services:
 
 volumes:
   postgres_data:  # объявляем volume для постоянного хранения данных PostgreSQL. Если не указать, то при остановке docker-compose и повторного запуска, ваши файлы пропадут
+  nats_data:
+  redis_data:
